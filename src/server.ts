@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import controllersRouter from './controllers';
+import { error404 } from './middleware/error404';
+import { error500 } from './middleware/error500';
 
 // Load environment variables
 dotenv.config();
@@ -24,22 +26,11 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
-// Error handling middleware
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
+// 404 handler - must be before error500 middleware
+app.use('*', error404);
 
-// 404 handler
-app.use('*', (req: Request, res: Response) => {
-  res.status(404).json({ 
-    error: 'Route not found',
-    message: `Cannot ${req.method} ${req.originalUrl}`
-  });
-});
+// Error handling middleware - must be last
+app.use(error500);
 
 // Start server
 app.listen(PORT, () => {
