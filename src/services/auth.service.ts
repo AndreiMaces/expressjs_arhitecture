@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { generateToken } from '../utils/jwt';
 import { UserRepository } from '../repositories/user.repository';
+import { ResponseHelper } from '../utils/response';
 import bcrypt from 'bcrypt';
 
 export class AuthService {
@@ -10,9 +11,7 @@ export class AuthService {
 
       // Basic validation
       if (!username || !password) {
-        res.status(400).json({
-          error: 'Username and password are required'
-        });
+        ResponseHelper.badRequest(res, 'Username and password are required');
         return;
       }
 
@@ -20,9 +19,7 @@ export class AuthService {
       const userExists = await UserRepository.exists(username);
 
       if (userExists) {
-        res.status(409).json({
-          error: 'Username already exists'
-        });
+        ResponseHelper.conflict(res, 'Username already exists');
         return;
       }
 
@@ -42,7 +39,7 @@ export class AuthService {
         username: user.username
       });
 
-      res.status(201).json({
+      ResponseHelper.created(res, {
         message: 'User registered successfully',
         token,
         user: {
@@ -52,9 +49,7 @@ export class AuthService {
       });
     } catch (error) {
       console.error('Registration error:', error);
-      res.status(500).json({
-        error: 'Internal server error'
-      });
+      ResponseHelper.internalError(res, 'Internal server error');
     }
   }
 
@@ -64,9 +59,7 @@ export class AuthService {
 
       // Basic validation
       if (!username || !password) {
-        res.status(400).json({
-          error: 'Username and password are required'
-        });
+        ResponseHelper.badRequest(res, 'Username and password are required');
         return;
       }
 
@@ -74,18 +67,14 @@ export class AuthService {
       const user = await UserRepository.findByUsername(username);
 
       if (!user) {
-        res.status(401).json({
-          error: 'Invalid credentials'
-        });
+        ResponseHelper.unauthorized(res, 'Invalid credentials');
         return;
       }
 
       // Check password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        res.status(401).json({
-          error: 'Invalid credentials'
-        });
+        ResponseHelper.unauthorized(res, 'Invalid credentials');
         return;
       }
 
@@ -95,7 +84,7 @@ export class AuthService {
         username: user.username
       });
 
-      res.json({
+      ResponseHelper.ok(res, {
         message: 'Login successful',
         token,
         user: {
@@ -105,9 +94,7 @@ export class AuthService {
       });
     } catch (error) {
       console.error('Login error:', error);
-      res.status(500).json({
-        error: 'Internal server error'
-      });
+      ResponseHelper.internalError(res, 'Internal server error');
     }
   }
 }
