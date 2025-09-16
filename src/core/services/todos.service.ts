@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { TodoRepository } from '../repositories/todo.repository';
 import { ResponseHelper } from '../utils/response.util';
+import { formatValidationErrors } from '../utils/validation.util';
 import { todoValidationSchema } from '../validation/todo.validation';
 
 export class TodosService {
@@ -37,7 +38,7 @@ export class TodosService {
       const validationResult = todoValidationSchema.safeParse(req.body);
       
       if (!validationResult.success) {
-        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
+        const errors = formatValidationErrors(validationResult.error);
         ResponseHelper.badRequest(res, errors);
         return;
       }
@@ -68,7 +69,7 @@ export class TodosService {
       const validationResult = todoValidationSchema.partial().safeParse(req.body);
       
       if (!validationResult.success) {
-        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
+        const errors = formatValidationErrors(validationResult.error);
         ResponseHelper.badRequest(res, errors);
         return;
       }

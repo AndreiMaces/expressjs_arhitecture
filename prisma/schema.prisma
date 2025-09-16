@@ -17,6 +17,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   todos     TodoListItem[]
+  logs      Log[]
 }
 
 model TodoListItem {
@@ -28,4 +29,14 @@ model TodoListItem {
   updatedAt   DateTime @updatedAt
   userId      Int
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Log {
+  id        Int      @id @default(autoincrement())
+  level     String   // INFO, WARN, ERROR, DEBUG
+  message   String
+  context   String?  // Additional context information
+  userId    Int?     // Optional user ID if the log is related to a user action
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
 }

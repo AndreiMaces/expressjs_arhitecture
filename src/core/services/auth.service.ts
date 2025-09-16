@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import { generateToken } from '../utils/jwt.util';
 import { UserRepository } from '../repositories/user.repository';
 import { ResponseHelper } from '../utils/response.util';
+import { formatValidationErrors } from '../utils/validation.util';
 import { registerValidationSchema, loginValidationSchema } from '../validation/auth.validation';
+import { Logger } from '../utils/logger.util';
 import bcrypt from 'bcrypt';
 
 export class AuthService {
@@ -12,8 +14,8 @@ export class AuthService {
       const validationResult = registerValidationSchema.safeParse(req.body);
       
       if (!validationResult.success) {
-        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
-        ResponseHelper.badRequest(res, errors);
+        const errors = formatValidationErrors(validationResult.error);
+        ResponseHelper.badRequest(res, errors, req);
         return;
       }
 
@@ -23,7 +25,7 @@ export class AuthService {
       const userExists = await UserRepository.exists(username);
 
       if (userExists) {
-        ResponseHelper.conflict(res, 'Username already exists');
+        ResponseHelper.conflict(res, 'Username already exists', req);
         return;
       }
 
@@ -43,6 +45,12 @@ export class AuthService {
         username: user.username
       });
 
+      // Log successful registration
+      await Logger.logAuth('register', user.id, {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
       ResponseHelper.created(res, {
         message: 'User registered successfully',
         token,
@@ -50,10 +58,15 @@ export class AuthService {
           id: user.id,
           username: user.username
         }
-      });
+      }, req);
     } catch (error) {
       console.error('Registration error:', error);
-      ResponseHelper.internalError(res, 'Internal server error');
+      await Logger.error('Registration failed', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      ResponseHelper.internalError(res, 'Internal server error', req);
     }
   }
 
@@ -63,8 +76,8 @@ export class AuthService {
       const validationResult = loginValidationSchema.safeParse(req.body);
       
       if (!validationResult.success) {
-        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
-        ResponseHelper.badRequest(res, errors);
+        const errors = formatValidationErrors(validationResult.error);
+        ResponseHelper.badRequest(res, errors, req);
         return;
       }
 
@@ -74,14 +87,24 @@ export class AuthService {
       const user = await UserRepository.findByUsername(username);
 
       if (!user) {
-        ResponseHelper.unauthorized(res, 'Invalid credentials');
+        await Logger.logAuth('auth_failed', undefined, {
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          reason: 'User not found'
+        });
+        ResponseHelper.unauthorized(res, 'Invalid credentials', req);
         return;
       }
 
       // Check password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        ResponseHelper.unauthorized(res, 'Invalid credentials');
+        await Logger.logAuth('auth_failed', user.id, {
+          ip: req.ip,
+          userAgent: req.get('User-Agent'),
+          reason: 'Invalid password'
+        });
+        ResponseHelper.unauthorized(res, 'Invalid credentials', req);
         return;
       }
 
@@ -91,6 +114,12 @@ export class AuthService {
         username: user.username
       });
 
+      // Log successful login
+      await Logger.logAuth('login', user.id, {
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
       ResponseHelper.ok(res, {
         message: 'Login successful',
         token,
@@ -98,10 +127,15 @@ export class AuthService {
           id: user.id,
           username: user.username
         }
-      });
+      }, req);
     } catch (error) {
       console.error('Login error:', error);
-      ResponseHelper.internalError(res, 'Internal server error');
+      await Logger.error('Login failed', {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      ResponseHelper.internalError(res, 'Internal server error', req);
     }
   }
 }
