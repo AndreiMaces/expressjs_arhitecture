@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { TodoRepository } from '../repositories/todo.repository';
-import { ResponseHelper } from '../utils/response';
+import { ResponseHelper } from '../utils/response.util';
 
 export class TodosService {
   static async getAllTodos(req: Request, res: Response): Promise<void> {

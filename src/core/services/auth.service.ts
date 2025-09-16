@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { generateToken } from '../utils/jwt';
+import { generateToken } from '../utils/jwt.util';
 import { UserRepository } from '../repositories/user.repository';
-import { ResponseHelper } from '../utils/response';
+import { ResponseHelper } from '../utils/response.util';
 import bcrypt from 'bcrypt';
 
 export class AuthService {

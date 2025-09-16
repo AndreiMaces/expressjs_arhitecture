@@ -1,9 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import controllersRouter from './controllers';
-import { error404 } from './middleware/error404';
-import { error500 } from './middleware/error500';
+import controllersRouter from './core/controllers';
+import { error404 } from './core/middleware/error404';
+import { error500 } from './core/middleware/error500';
 
 // Load environment variables
 dotenv.config();

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ResponseHelper } from '../utils/response';
+import { ResponseHelper } from '../utils/response.util';
 
 export const error500 = (err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Server Error:', err);
