@@ -8,10 +8,10 @@ export class TodosService {
   static async getAllTodos(req: Request, res: Response): Promise<void> {
     try {
       const todos = await TodoRepository.findAllByUserId(req.user!.userId);
-      ResponseHelper.ok(res, todos);
+      ResponseHelper.ok(res, todos, req);
     } catch (error) {
       console.error('Error fetching todos:', error);
-      ResponseHelper.internalError(res, 'Failed to fetch todos');
+      ResponseHelper.internalError(res, 'Failed to fetch todos', req);
     }
   }
 
@@ -21,14 +21,14 @@ export class TodosService {
       const todo = await TodoRepository.findById(parseInt(id), req.user!.userId);
 
       if (!todo) {
-        ResponseHelper.notFound(res, 'Todo item not found');
+        ResponseHelper.notFound(res, 'Todo item not found', req);
         return;
       }
 
-      ResponseHelper.ok(res, todo);
+      ResponseHelper.ok(res, todo, req);
     } catch (error) {
       console.error('Error fetching todo:', error);
-      ResponseHelper.internalError(res, 'Failed to fetch todo');
+      ResponseHelper.internalError(res, 'Failed to fetch todo', req);
     }
   }
 
@@ -39,7 +39,7 @@ export class TodosService {
       
       if (!validationResult.success) {
         const errors = formatValidationErrors(validationResult.error);
-        ResponseHelper.badRequest(res, errors);
+        ResponseHelper.badRequest(res, errors, req);
         return;
       }
 
@@ -53,10 +53,10 @@ export class TodosService {
         userId: req.user!.userId
       });
 
-      ResponseHelper.created(res, todo);
+      ResponseHelper.created(res, todo, req);
     } catch (error) {
       console.error('Error creating todo:', error);
-      ResponseHelper.internalError(res, 'Failed to create todo');
+      ResponseHelper.internalError(res, 'Failed to create todo', req);
     }
   }
 
@@ -70,20 +70,20 @@ export class TodosService {
       
       if (!validationResult.success) {
         const errors = formatValidationErrors(validationResult.error);
-        ResponseHelper.badRequest(res, errors);
+        ResponseHelper.badRequest(res, errors, req);
         return;
       }
 
       const todo = await TodoRepository.update(parseInt(id), req.user!.userId, { title, description, checked });
 
-      ResponseHelper.ok(res, todo);
+      ResponseHelper.ok(res, todo, req);
     } catch (error) {
       console.error('Error updating todo:', error);
       if (error instanceof Error && error.message === 'Todo item not found or does not belong to user') {
-        ResponseHelper.notFound(res, 'Todo item not found');
+        ResponseHelper.notFound(res, 'Todo item not found', req);
         return;
       }
-      ResponseHelper.internalError(res, 'Failed to update todo');
+      ResponseHelper.internalError(res, 'Failed to update todo', req);
     }
   }
 
@@ -93,14 +93,14 @@ export class TodosService {
 
       await TodoRepository.delete(parseInt(id), req.user!.userId);
 
-      ResponseHelper.noContent(res);
+      ResponseHelper.noContent(res, req);
     } catch (error) {
       console.error('Error deleting todo:', error);
       if (error instanceof Error && error.message === 'Todo item not found or does not belong to user') {
-        ResponseHelper.notFound(res, 'Todo item not found');
+        ResponseHelper.notFound(res, 'Todo item not found', req);
         return;
       }
-      ResponseHelper.internalError(res, 'Failed to delete todo');
+      ResponseHelper.internalError(res, 'Failed to delete todo', req);
     }
   }
 }
