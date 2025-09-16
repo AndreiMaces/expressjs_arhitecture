@@ -1,10 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
-require('dotenv').config();
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT: number = parseInt(process.env.PORT || '3000', 10);
 const prisma = new PrismaClient();
 
 // Middleware
@@ -14,7 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Todo Routes
 // GET /api/todos - Get all todo items
-app.get('/api/todos', async (req, res) => {
+app.get('/api/todos', async (req: Request, res: Response) => {
   try {
     const todos = await prisma.todoListItem.findMany({
       orderBy: {
@@ -29,7 +32,7 @@ app.get('/api/todos', async (req, res) => {
 });
 
 // GET /api/todos/:id - Get a specific todo item
-app.get('/api/todos/:id', async (req, res) => {
+app.get('/api/todos/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const todo = await prisma.todoListItem.findUnique({
@@ -45,10 +48,11 @@ app.get('/api/todos/:id', async (req, res) => {
     console.error('Error fetching todo:', error);
     res.status(500).json({ error: 'Failed to fetch todo' });
   }
+  return;
 });
 
 // POST /api/todos - Create a new todo item
-app.post('/api/todos', async (req, res) => {
+app.post('/api/todos', async (req: Request, res: Response) => {
   try {
     const { title, description, checked } = req.body;
 
@@ -69,10 +73,11 @@ app.post('/api/todos', async (req, res) => {
     console.error('Error creating todo:', error);
     res.status(500).json({ error: 'Failed to create todo' });
   }
+  return;
 });
 
 // PUT /api/todos/:id - Update a todo item
-app.put('/api/todos/:id', async (req, res) => {
+app.put('/api/todos/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, description, checked } = req.body;
@@ -86,7 +91,7 @@ app.put('/api/todos/:id', async (req, res) => {
       return res.status(404).json({ error: 'Todo item not found' });
     }
 
-    const updateData = {};
+    const updateData: any = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (checked !== undefined) updateData.checked = checked;
@@ -101,10 +106,11 @@ app.put('/api/todos/:id', async (req, res) => {
     console.error('Error updating todo:', error);
     res.status(500).json({ error: 'Failed to update todo' });
   }
+  return;
 });
 
 // DELETE /api/todos/:id - Delete a todo item
-app.delete('/api/todos/:id', async (req, res) => {
+app.delete('/api/todos/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -126,17 +132,18 @@ app.delete('/api/todos/:id', async (req, res) => {
     console.error('Error deleting todo:', error);
     res.status(500).json({ error: 'Failed to delete todo' });
   }
+  return;
 });
 
 // Root endpoint
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.json({
     res: 'Hello World'
   });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ 
     error: 'Something went wrong!',
@@ -145,7 +152,7 @@ app.use((err, req, res, next) => {
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (req: Request, res: Response) => {
   res.status(404).json({ 
     error: 'Route not found',
     message: `Cannot ${req.method} ${req.originalUrl}`
@@ -158,4 +165,4 @@ app.listen(PORT, () => {
   console.log(`Todo List API available at http://localhost:${PORT}`);
 });
 
-module.exports = app;
+export default app;

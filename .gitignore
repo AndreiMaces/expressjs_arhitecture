@@ -16,6 +16,9 @@ yarn-error.log*
 *.db-journal
 prisma/migrations/
 
+# TypeScript build output
+dist/
+
 # Logs
 logs
 *.log
