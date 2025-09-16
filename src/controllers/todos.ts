@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { verifyToken, extractTokenFromHeader } from '../utils/jwt';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -8,14 +7,9 @@ const prisma = new PrismaClient();
 // GET /api/todos - Get all todo items for the authenticated user
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Authentication check
-    const authHeader = req.headers.authorization;
-    const token = extractTokenFromHeader(authHeader);
-    const user = verifyToken(token);
-    
     const todos = await prisma.todoListItem.findMany({
       where: {
-        userId: user.userId
+        userId: req.user!.userId
       },
       orderBy: {
         createdAt: 'desc'
@@ -24,10 +18,6 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
     res.json(todos);
   } catch (error) {
     console.error('Error fetching todos:', error);
-    if (error instanceof Error && error.message.includes('token')) {
-      res.status(401).json({ error: 'Unauthorized - Invalid or missing token' });
-      return;
-    }
     res.status(500).json({ error: 'Failed to fetch todos' });
   }
 });
@@ -35,16 +25,11 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 // GET /api/todos/:id - Get a specific todo item for the authenticated user
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Authentication check
-    const authHeader = req.headers.authorization;
-    const token = extractTokenFromHeader(authHeader);
-    const user = verifyToken(token);
-    
     const { id } = req.params;
     const todo = await prisma.todoListItem.findFirst({
       where: { 
         id: parseInt(id),
-        userId: user.userId
+        userId: req.user!.userId
       }
     });
 
@@ -56,10 +41,6 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
     res.json(todo);
   } catch (error) {
     console.error('Error fetching todo:', error);
-    if (error instanceof Error && error.message.includes('token')) {
-      res.status(401).json({ error: 'Unauthorized - Invalid or missing token' });
-      return;
-    }
     res.status(500).json({ error: 'Failed to fetch todo' });
   }
 });
@@ -67,11 +48,6 @@ router.get('/:id', async (req: Request, res: Response): Promise<void> => {
 // POST /api/todos - Create a new todo item for the authenticated user
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Authentication check
-    const authHeader = req.headers.authorization;
-    const token = extractTokenFromHeader(authHeader);
-    const user = verifyToken(token);
-    
     const { title, description, checked } = req.body;
 
     if (!title) {
@@ -84,17 +60,13 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         title,
         description: description || null,
         checked: checked || false,
-        userId: user.userId
+        userId: req.user!.userId
       }
     });
 
     res.status(201).json(todo);
   } catch (error) {
     console.error('Error creating todo:', error);
-    if (error instanceof Error && error.message.includes('token')) {
-      res.status(401).json({ error: 'Unauthorized - Invalid or missing token' });
-      return;
-    }
     res.status(500).json({ error: 'Failed to create todo' });
   }
 });
@@ -102,11 +74,6 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 // PUT /api/todos/:id - Update a todo item for the authenticated user
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Authentication check
-    const authHeader = req.headers.authorization;
-    const token = extractTokenFromHeader(authHeader);
-    const user = verifyToken(token);
-    
     const { id } = req.params;
     const { title, description, checked } = req.body;
 
@@ -114,7 +81,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     const existingTodo = await prisma.todoListItem.findFirst({
       where: { 
         id: parseInt(id),
-        userId: user.userId
+        userId: req.user!.userId
       }
     });
 
@@ -136,10 +103,6 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     res.json(todo);
   } catch (error) {
     console.error('Error updating todo:', error);
-    if (error instanceof Error && error.message.includes('token')) {
-      res.status(401).json({ error: 'Unauthorized - Invalid or missing token' });
-      return;
-    }
     res.status(500).json({ error: 'Failed to update todo' });
   }
 });
@@ -147,18 +110,13 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 // DELETE /api/todos/:id - Delete a todo item for the authenticated user
 router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    // Authentication check
-    const authHeader = req.headers.authorization;
-    const token = extractTokenFromHeader(authHeader);
-    const user = verifyToken(token);
-    
     const { id } = req.params;
 
     // Check if todo exists and belongs to the user
     const existingTodo = await prisma.todoListItem.findFirst({
       where: { 
         id: parseInt(id),
-        userId: user.userId
+        userId: req.user!.userId
       }
     });
 
@@ -174,10 +132,6 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting todo:', error);
-    if (error instanceof Error && error.message.includes('token')) {
-      res.status(401).json({ error: 'Unauthorized - Invalid or missing token' });
-      return;
-    }
     res.status(500).json({ error: 'Failed to delete todo' });
   }
 });

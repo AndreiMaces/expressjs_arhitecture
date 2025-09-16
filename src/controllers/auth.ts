@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { generateToken } from '../utils/jwt';
+import bcrypt from 'bcrypt';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -30,11 +31,15 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Create new user (password stored as plain text as requested)
+    // Hash password before storing
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create new user with hashed password
     const user = await prisma.user.create({
       data: {
         username,
-        password
+        password: hashedPassword
       }
     });
 
@@ -85,8 +90,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Check password (plain text comparison as requested)
-    if (user.password !== password) {
+    // Check password using bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
       res.status(401).json({
         error: 'Invalid credentials'
       });
