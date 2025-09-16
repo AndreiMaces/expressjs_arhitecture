@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { TodoRepository } from '../repositories/todo.repository';
 import { ResponseHelper } from '../utils/response.util';
+import { todoValidationSchema } from '../validation/todo.validation';
 
 export class TodosService {
   static async getAllTodos(req: Request, res: Response): Promise<void> {
@@ -32,12 +33,17 @@ export class TodosService {
 
   static async createTodo(req: Request, res: Response): Promise<void> {
     try {
-      const { title, description, checked } = req.body;
-
-      if (!title) {
-        ResponseHelper.badRequest(res, 'Title is required');
+      // Validate input using Zod schema
+      const validationResult = todoValidationSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
+        ResponseHelper.badRequest(res, errors);
         return;
       }
+
+      const { title, description } = validationResult.data;
+      const { checked } = req.body;
 
       const todo = await TodoRepository.create({
         title,
@@ -58,12 +64,16 @@ export class TodosService {
       const { id } = req.params;
       const { title, description, checked } = req.body;
 
-      const updateData: any = {};
-      if (title !== undefined) updateData.title = title;
-      if (description !== undefined) updateData.description = description;
-      if (checked !== undefined) updateData.checked = checked;
+      // Validate only the fields that are being updated using partial schema
+      const validationResult = todoValidationSchema.partial().safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
+        ResponseHelper.badRequest(res, errors);
+        return;
+      }
 
-      const todo = await TodoRepository.update(parseInt(id), req.user!.userId, updateData);
+      const todo = await TodoRepository.update(parseInt(id), req.user!.userId, { title, description, checked });
 
       ResponseHelper.ok(res, todo);
     } catch (error) {

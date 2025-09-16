@@ -2,18 +2,22 @@ import { Request, Response } from 'express';
 import { generateToken } from '../utils/jwt.util';
 import { UserRepository } from '../repositories/user.repository';
 import { ResponseHelper } from '../utils/response.util';
+import { registerValidationSchema, loginValidationSchema } from '../validation/auth.validation';
 import bcrypt from 'bcrypt';
 
 export class AuthService {
   static async register(req: Request, res: Response): Promise<void> {
     try {
-      const { username, password } = req.body;
-
-      // Basic validation
-      if (!username || !password) {
-        ResponseHelper.badRequest(res, 'Username and password are required');
+      // Validate input using Zod schema
+      const validationResult = registerValidationSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
+        ResponseHelper.badRequest(res, errors);
         return;
       }
+
+      const { username, password } = validationResult.data;
 
       // Check if user already exists
       const userExists = await UserRepository.exists(username);
@@ -55,13 +59,16 @@ export class AuthService {
 
   static async login(req: Request, res: Response): Promise<void> {
     try {
-      const { username, password } = req.body;
-
-      // Basic validation
-      if (!username || !password) {
-        ResponseHelper.badRequest(res, 'Username and password are required');
+      // Validate input using Zod schema
+      const validationResult = loginValidationSchema.safeParse(req.body);
+      
+      if (!validationResult.success) {
+        const errors = validationResult.error.issues.map((err: any) => `${err.path.join('.')}: ${err.message}`);
+        ResponseHelper.badRequest(res, errors);
         return;
       }
+
+      const { username, password } = validationResult.data;
 
       // Find user by username
       const user = await UserRepository.findByUsername(username);
