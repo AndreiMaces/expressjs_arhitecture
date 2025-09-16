@@ -1,19 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { TodoRepository } from '../repositories/todo.repository';
 
 export class TodosService {
   static async getAllTodos(req: Request, res: Response): Promise<void> {
     try {
-      const todos = await prisma.todoListItem.findMany({
-        where: {
-          userId: req.user!.userId
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      });
+      const todos = await TodoRepository.findAllByUserId(req.user!.userId);
       res.json(todos);
     } catch (error) {
       console.error('Error fetching todos:', error);
@@ -24,12 +15,7 @@ export class TodosService {
   static async getTodoById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const todo = await prisma.todoListItem.findFirst({
-        where: { 
-          id: parseInt(id),
-          userId: req.user!.userId
-        }
-      });
+      const todo = await TodoRepository.findById(parseInt(id), req.user!.userId);
 
       if (!todo) {
         res.status(404).json({ error: 'Todo item not found' });
@@ -52,13 +38,11 @@ export class TodosService {
         return;
       }
 
-      const todo = await prisma.todoListItem.create({
-        data: {
-          title,
-          description: description || null,
-          checked: checked || false,
-          userId: req.user!.userId
-        }
+      const todo = await TodoRepository.create({
+        title,
+        description: description || null,
+        checked: checked || false,
+        userId: req.user!.userId
       });
 
       res.status(201).json(todo);
@@ -73,32 +57,20 @@ export class TodosService {
       const { id } = req.params;
       const { title, description, checked } = req.body;
 
-      // Check if todo exists and belongs to the user
-      const existingTodo = await prisma.todoListItem.findFirst({
-        where: { 
-          id: parseInt(id),
-          userId: req.user!.userId
-        }
-      });
-
-      if (!existingTodo) {
-        res.status(404).json({ error: 'Todo item not found' });
-        return;
-      }
-
       const updateData: any = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
       if (checked !== undefined) updateData.checked = checked;
 
-      const todo = await prisma.todoListItem.update({
-        where: { id: parseInt(id) },
-        data: updateData
-      });
+      const todo = await TodoRepository.update(parseInt(id), req.user!.userId, updateData);
 
       res.json(todo);
     } catch (error) {
       console.error('Error updating todo:', error);
+      if (error instanceof Error && error.message === 'Todo item not found or does not belong to user') {
+        res.status(404).json({ error: 'Todo item not found' });
+        return;
+      }
       res.status(500).json({ error: 'Failed to update todo' });
     }
   }
@@ -107,26 +79,15 @@ export class TodosService {
     try {
       const { id } = req.params;
 
-      // Check if todo exists and belongs to the user
-      const existingTodo = await prisma.todoListItem.findFirst({
-        where: { 
-          id: parseInt(id),
-          userId: req.user!.userId
-        }
-      });
-
-      if (!existingTodo) {
-        res.status(404).json({ error: 'Todo item not found' });
-        return;
-      }
-
-      await prisma.todoListItem.delete({
-        where: { id: parseInt(id) }
-      });
+      await TodoRepository.delete(parseInt(id), req.user!.userId);
 
       res.status(204).send();
     } catch (error) {
       console.error('Error deleting todo:', error);
+      if (error instanceof Error && error.message === 'Todo item not found or does not belong to user') {
+        res.status(404).json({ error: 'Todo item not found' });
+        return;
+      }
       res.status(500).json({ error: 'Failed to delete todo' });
     }
   }

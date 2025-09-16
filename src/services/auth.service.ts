@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { generateToken } from '../utils/jwt';
+import { UserRepository } from '../repositories/user.repository';
 import bcrypt from 'bcrypt';
-
-const prisma = new PrismaClient();
 
 export class AuthService {
   static async register(req: Request, res: Response): Promise<void> {
@@ -19,11 +17,9 @@ export class AuthService {
       }
 
       // Check if user already exists
-      const existingUser = await prisma.user.findUnique({
-        where: { username }
-      });
+      const userExists = await UserRepository.exists(username);
 
-      if (existingUser) {
+      if (userExists) {
         res.status(409).json({
           error: 'Username already exists'
         });
@@ -35,11 +31,9 @@ export class AuthService {
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
       // Create new user with hashed password
-      const user = await prisma.user.create({
-        data: {
-          username,
-          password: hashedPassword
-        }
+      const user = await UserRepository.create({
+        username,
+        password: hashedPassword
       });
 
       // Generate JWT token
@@ -77,9 +71,7 @@ export class AuthService {
       }
 
       // Find user by username
-      const user = await prisma.user.findUnique({
-        where: { username }
-      });
+      const user = await UserRepository.findByUsername(username);
 
       if (!user) {
         res.status(401).json({
